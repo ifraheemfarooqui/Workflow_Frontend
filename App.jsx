@@ -10,6 +10,10 @@ import TaskDialog from "./src/components/TaskDialog";
 import UserProfile from "./src/components/UserProfile";
 import ForgotPassword from "./src/components/ForgotPassword";
 import ResetPassword from "./src/components/ResetPassword";
+import TeamMembersDialog from "./src/components/TeamMembersDialog";
+import InviteTeamMemberDialog from "./src/components/InviteTeamMemberDialog";
+import ProjectTeamsDialog from "./src/components/ProjectTeamsDialog";
+import NotificationsPanel from "./src/components/NotificationsPanel";
 
 export default function App() {
   const route = useRoute();
@@ -19,14 +23,21 @@ export default function App() {
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [conversations, setConversations] = useState([]);
+  const [pendingInvites, setPendingInvites] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [membersByTeam, setMembersByTeam] = useState({});
   const [dialog, setDialog] = useState(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [pendingInvitesError, setPendingInvitesError] = useState("");
+  const [notificationsError, setNotificationsError] = useState("");
   const [loginNotice, setLoginNotice] = useState("");
+  const [inviteError, setInviteError] = useState("");
 
   const currentUserId = getUserId();
+  const inviteToken = new URLSearchParams(window.location.search).get("invite") || "";
   const memberships = useMemo(() => new Set(
     Object.entries(membersByTeam)
       .filter(([, members]) => members.some((member) => member.user.id === currentUserId))
@@ -52,6 +63,18 @@ export default function App() {
     project.id === route.projectId && project.teamIds?.includes(route.teamId),
   );
   const selectedMembers = selectedTeam ? membersByTeam[selectedTeam.id] || [] : [];
+  const canManageSelectedTeam = selectedMembers.some(
+    (member) => member.user.id === currentUserId && member.role_in_team === "manager",
+  );
+  const managedTeams = teams.filter((team) =>
+    membersByTeam[team.id]?.some(
+      (member) => member.user.id === currentUserId && member.role_in_team === "manager",
+    ),
+  );
+  const selectedProjectTeams = selectedProject?.teams || [];
+  const availableProjectTeams = managedTeams.filter(
+    (team) => !selectedProject?.teamIds?.includes(team.id),
+  );
   const selectedTeamProjects = projects.filter((project) =>
     project.teamIds?.includes(route.teamId),
   );
@@ -73,30 +96,52 @@ export default function App() {
     setHasLoaded(false);
     setError("");
     try {
-      const [teamList, projectList, taskList, userList, conversationList, currentUser] = await Promise.all([
+      const [teamList, projectList, taskList, userList, conversationList, currentUser, inviteResult, notificationResult] = await Promise.all([
         api.listTeams(),
         api.listProjects(),
         api.listTasks(),
         api.listUsers(),
         api.listConversations(),
         api.getCurrentUser(),
+        api.listMyInvites().then(
+          (invites) => ({ invites, error: "" }),
+          (inviteRequestError) => ({ invites: [], error: inviteRequestError.message }),
+        ),
+        api.listNotifications().then(
+          (items) => ({ items, error: "" }),
+          (requestError) => ({ items: [], error: requestError.message }),
+        ),
       ]);
-      const [memberLists, projectTeamLists] = await Promise.all([
-        Promise.all(teamList.map((team) => api.listMembers(team.id))),
+      const [memberResults, projectTeamLists] = await Promise.all([
+        Promise.allSettled(teamList.map((team) => api.listMembers(team.id))),
         Promise.all(projectList.map((project) => api.listProjectTeams(project.id))),
       ]);
+      const accessibleTeams = teamList.flatMap((team, index) => {
+        const result = memberResults[index];
+        return result.status === "fulfilled"
+          ? [{ team, members: result.value }]
+          : [];
+      });
 
-      setTeams(teamList);
+      setTeams(accessibleTeams.map(({ team }) => team));
       setProjects(projectList.map((project, index) => ({
         ...project,
+        teams: projectTeamLists[index].map((relation) => relation.team),
         teamIds: projectTeamLists[index].map((relation) => relation.team.id),
       })));
       setTasks(taskList);
       setUsers([...userList, currentUser]);
       setConversations(conversationList);
+      setPendingInvites(inviteResult.invites);
+      setPendingInvitesError(inviteResult.error);
+      setNotifications(notificationResult.items);
+      setNotificationsError(notificationResult.error);
       setMembersByTeam(Object.fromEntries(
-        teamList.map((team, index) => [team.id, memberLists[index]]),
+        accessibleTeams.map(({ team, members }) => [team.id, members]),
       ));
+      if (accessibleTeams.length < teamList.length) {
+        setError("Some team details could not be loaded. Unavailable teams were hidden; retry to load them again.");
+      }
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -110,13 +155,58 @@ export default function App() {
   }, [token, loadWorkspace]);
 
   useEffect(() => {
+    setMobileNavOpen(false);
+  }, [route.pathname]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return undefined;
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setMobileNavOpen(false);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileNavOpen]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    const interval = window.setInterval(() => {
+      api.listNotifications()
+        .then((items) => {
+          setNotifications(items);
+          setNotificationsError("");
+        })
+        .catch((requestError) => setNotificationsError(requestError.message));
+    }, 30000);
+    return () => window.clearInterval(interval);
+  }, [token]);
+
+  useEffect(() => {
     const publicPasswordRoutes = ["forgot-password", "reset-password"];
     if (!token && route.name !== "login" && !publicPasswordRoutes.includes(route.name)) {
       navigate(paths.login(), { replace: true });
-    } else if (token && route.name === "login") {
+    } else if (token && route.name === "login" && !inviteToken) {
       navigate(paths.workspace(), { replace: true });
     }
-  }, [token, route.name]);
+  }, [token, route.name, inviteToken]);
+
+  useEffect(() => {
+    if (!token || route.name !== "login" || !inviteToken) return undefined;
+    let active = true;
+    api.acceptInvite(inviteToken)
+      .then(() => {
+        if (active) navigate(paths.workspace(), { replace: true });
+      })
+      .catch((requestError) => {
+        if (active) {
+          setAccessToken(null);
+          setToken(null);
+          setInviteError(requestError.message);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [token, route.name, inviteToken]);
 
   useEffect(() => {
     const expireSession = () => setToken(null);
@@ -163,10 +253,18 @@ export default function App() {
     directChatUser, currentUserId, memberships,
   ]);
 
-  async function authenticate({ name, email, password, registering }) {
-    if (registering) await api.register(name, email, password);
+  async function authenticate({ name, email, password, registering, inviteToken: invitation }) {
+    if (registering) await api.register(name, email, password, invitation);
     const result = await api.login(email, password);
     setAccessToken(result.access_token);
+    if (invitation && !registering) {
+      try {
+        await api.acceptInvite(invitation);
+      } catch (requestError) {
+        setAccessToken(null);
+        throw requestError;
+      }
+    }
     setToken(result.access_token);
     navigate(paths.workspace(), { replace: true });
   }
@@ -217,6 +315,70 @@ export default function App() {
     const created = await api.createProject({ name, description, team_id: selectedTeam.id });
     await loadWorkspace();
     navigate(paths.project(selectedTeam.id, created.id));
+  }
+
+  async function inviteTeamMember(email) {
+    if (!selectedTeam || !canManageSelectedTeam) {
+      throw new Error("Only a team manager can invite members.");
+    }
+    await api.createTeamInvite(selectedTeam.id, email);
+    await loadWorkspace();
+  }
+
+  async function addProjectTeam(teamId) {
+    if (!selectedProject) throw new Error("Choose a project before adding a team.");
+    await api.addProjectTeams(selectedProject.id, [teamId]);
+    await loadWorkspace();
+  }
+
+  async function acceptPendingInvite(invite) {
+    setMobileNavOpen(false);
+    await api.acceptInvite(invite.token);
+    await loadWorkspace();
+  }
+
+  async function openNotification(notification) {
+    try {
+      if (!notification.read_at) {
+        const updated = await api.markNotificationRead(notification.id);
+        setNotifications((current) => current.map((item) =>
+          item.id === updated.id ? updated : item,
+        ));
+      }
+      const project = projects.find((item) => item.id === notification.project_id);
+      const teamId = memberships.has(notification.team_id)
+        ? notification.team_id
+        : project?.teamIds.find((id) => memberships.has(id));
+      if (teamId && notification.project_id && project) {
+        if (notification.task_id) {
+          navigate(paths.task(teamId, notification.project_id, notification.task_id));
+        } else {
+          navigate(paths.project(teamId, notification.project_id));
+        }
+      } else if (teamId) {
+        navigate(paths.team(teamId));
+      } else {
+        navigate(paths.workspace());
+      }
+      setNotificationsError("");
+    } catch (requestError) {
+      setNotificationsError(requestError.message);
+      throw requestError;
+    }
+  }
+
+  async function markAllNotificationsRead() {
+    try {
+      await api.markAllNotificationsRead();
+      const readAt = new Date().toISOString();
+      setNotifications((current) => current.map((item) => item.read_at
+        ? item
+        : { ...item, read_at: readAt },
+      ));
+      setNotificationsError("");
+    } catch (requestError) {
+      setNotificationsError(requestError.message);
+    }
   }
 
   async function joinTeam(teamId) {
@@ -318,17 +480,32 @@ export default function App() {
         onAuthenticate={authenticate}
         onForgotPassword={() => navigate(paths.forgotPassword())}
         notice={loginNotice}
+        inviteToken={inviteToken}
+        inviteError={inviteError}
       />
     );
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${mobileNavOpen ? "mobile-nav-open" : ""}`}>
+      {mobileNavOpen && (
+        <button
+          className="mobile-nav-backdrop"
+          type="button"
+          aria-label="Dismiss navigation overlay"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
       <Sidebar
+        mobileNavOpen={mobileNavOpen}
+        onCloseMobileNav={() => setMobileNavOpen(false)}
         teams={teams}
         memberships={memberships}
         selectedTeamId={route.teamId}
         conversations={conversations}
+        pendingInvites={pendingInvites}
+        pendingInvitesError={pendingInvitesError}
+        onAcceptInvite={acceptPendingInvite}
         users={users}
         currentUserId={currentUserId}
         selectedChat={selectedChat}
@@ -346,6 +523,16 @@ export default function App() {
       />
       <section className="workspace">
         <header className="workspace-header">
+          <button
+            className="mobile-nav-trigger"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-expanded={mobileNavOpen}
+            aria-controls="workspace-sidebar"
+            onClick={() => setMobileNavOpen(true)}
+          >
+            <span aria-hidden="true">☰</span>
+          </button>
           <div className="breadcrumbs">
             <a href="/" onClick={(event) => { event.preventDefault(); navigate(paths.workspace()); }}>Your workspace</a>
             {route.name === "team-chat" && selectedTeam && <>
@@ -374,6 +561,12 @@ export default function App() {
             </>}
           </div>
           <div className="header-actions">
+            <NotificationsPanel
+              notifications={notifications}
+              error={notificationsError}
+              onOpen={openNotification}
+              onMarkAllRead={markAllNotificationsRead}
+            />
             <span className={`connection-state ${error ? "connection-error" : ""}`}><i />{error ? "Connection issue" : "Synced with API"}</span>
             <span className="header-avatar" title={user.name}>{user.name.slice(0, 1).toUpperCase()}</span>
           </div>
@@ -465,6 +658,16 @@ export default function App() {
                   <div className="team-hub-actions">
                     <button className="primary" onClick={() => navigate(paths.teamChat(selectedTeam.id))}>Open team chat <span>↗</span></button>
                     {memberships.has(selectedTeam.id) && <button className="team-hub-secondary" onClick={() => setDialog({ type: "project" })}>＋ New project</button>}
+                    {canManageSelectedTeam && (
+                      <button className="team-hub-secondary" onClick={() => setDialog({ type: "invite-member" })}>
+                        ＋ Add members
+                      </button>
+                    )}
+                    {memberships.has(selectedTeam.id) && (
+                      <button className="team-hub-secondary" onClick={() => setDialog({ type: "members" })}>
+                        View members
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="team-hub-stats">
@@ -508,7 +711,12 @@ export default function App() {
                   <h1>{selectedProject.name}</h1>
                   <p className="project-description">{selectedProject.description || "A shared space to keep the work moving."}</p>
                 </div>
-                <button className="primary add-task-button" onClick={() => setDialog({ type: "task" })}><span>+</span> Add task</button>
+                <div className="project-heading-actions">
+                  {availableProjectTeams.length > 0 && canManageSelectedTeam && (
+                    <button className="secondary" onClick={() => setDialog({ type: "project-teams" })}>＋ Add team</button>
+                  )}
+                  <button className="primary add-task-button" onClick={() => setDialog({ type: "task" })}><span>+</span> Add task</button>
+                </div>
               </div>
               <div className="board-toolbar">
                 <div className="board-summary"><span className="summary-dot" />{visibleTasks.length} {visibleTasks.length === 1 ? "task" : "tasks"} in this project</div>
@@ -520,6 +728,7 @@ export default function App() {
               <TaskBoard
                 tasks={visibleTasks}
                 users={users}
+                teams={selectedProjectTeams}
                 onOpenTask={selectTask}
                 onChangeStatus={changeTaskStatus}
                 onCreateTask={() => setDialog({ type: "task" })}
@@ -534,9 +743,32 @@ export default function App() {
         <TaskDialog
           project={selectedProject}
           members={selectedMembers}
+          teams={selectedProjectTeams}
           currentUserId={currentUserId}
           onClose={() => setDialog(null)}
           onTaskCreated={createTask}
+        />
+      )}
+      {dialog?.type === "invite-member" && selectedTeam && canManageSelectedTeam && (
+        <InviteTeamMemberDialog
+          team={selectedTeam}
+          onClose={() => setDialog(null)}
+          onSubmit={inviteTeamMember}
+        />
+      )}
+      {dialog?.type === "project-teams" && selectedProject && (
+        <ProjectTeamsDialog
+          teams={availableProjectTeams}
+          projectName={selectedProject.name}
+          onClose={() => setDialog(null)}
+          onSubmit={addProjectTeam}
+        />
+      )}
+      {dialog?.type === "members" && selectedTeam && memberships.has(selectedTeam.id) && (
+        <TeamMembersDialog
+          team={selectedTeam}
+          members={selectedMembers}
+          onClose={() => setDialog(null)}
         />
       )}
       {route.name === "task" && selectedTask && selectedProject && (
@@ -544,6 +776,7 @@ export default function App() {
           task={selectedTask}
           project={selectedProject}
           members={selectedMembers}
+          teams={selectedProjectTeams}
           currentUserId={currentUserId}
           onClose={closeTask}
           onTaskDeleted={deleteTask}

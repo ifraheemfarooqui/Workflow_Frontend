@@ -77,8 +77,17 @@ export const api = {
     request("/auth/forgot-password", { method: "POST", json: { email } }),
   resetPassword: (token, newPassword) =>
     request("/auth/reset-password", { method: "POST", json: { token, new_password: newPassword } }),
-  register: (name, email, password) =>
-    request("/users/", { method: "POST", json: { name, email, password } }),
+  register: (name, email, password, inviteToken) =>
+    request("/users/", {
+      method: "POST",
+      json: { name, email, password, ...(inviteToken ? { invite_token: inviteToken } : {}) },
+    }),
+  acceptInvite: (token) => request(`/invites/${encodeURIComponent(token)}/accept`, { method: "POST" }),
+  listMyInvites: () => request("/invites/mine"),
+  listNotifications: () => request("/notifications/?limit=100"),
+  markNotificationRead: (notificationId) =>
+    request(`/notifications/${notificationId}/read`, { method: "PATCH" }),
+  markAllNotificationsRead: () => request("/notifications/read-all", { method: "POST" }),
   getCurrentUser: () => request("/users/me"),
   updateCurrentUser: (profile) => request("/users/me", { method: "PUT", json: profile }),
   requestAccountDeletion: (currentPassword) =>
@@ -89,8 +98,12 @@ export const api = {
   createTeam: (name) => request("/teams/", { method: "POST", json: { name } }),
   joinTeam: (teamId) => request(`/teams/${teamId}/join`, { method: "POST" }),
   listMembers: (teamId) => request(`/teams/${teamId}/members`),
+  createTeamInvite: (teamId, email) =>
+    request(`/teams/${teamId}/invites`, { method: "POST", json: { email } }),
   listProjects: () => request("/projects/?skip=0&limit=100"),
   listProjectTeams: (projectId) => request(`/projects/${projectId}/teams`),
+  addProjectTeams: (projectId, teamIds) =>
+    request(`/projects/${projectId}/teams`, { method: "POST", json: { team_ids: teamIds } }),
   createProject: (project) => request("/projects/", { method: "POST", json: project }),
   listTasks: () => request("/tasks/?skip=0&limit=100"),
   createTask: (task) => request("/tasks/", { method: "POST", json: task }),

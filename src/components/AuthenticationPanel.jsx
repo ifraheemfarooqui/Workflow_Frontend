@@ -1,6 +1,12 @@
 import { useState } from "react";
 
-export default function AuthenticationPanel({ onAuthenticate, onForgotPassword, notice = "" }) {
+export default function AuthenticationPanel({
+  onAuthenticate,
+  onForgotPassword,
+  notice = "",
+  inviteToken = "",
+  inviteError = "",
+}) {
   const [registering, setRegistering] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -16,6 +22,7 @@ export default function AuthenticationPanel({ onAuthenticate, onForgotPassword, 
         email: values.get("email"),
         password: values.get("password"),
         registering,
+        ...(inviteToken ? { inviteToken } : {}),
       });
     } catch (requestError) {
       setError(requestError.message);
@@ -42,6 +49,7 @@ export default function AuthenticationPanel({ onAuthenticate, onForgotPassword, 
           <p className="form-intro">
             {registering ? "Set up your account and start collaborating." : "Pick up right where your team left off."}
           </p>
+          {inviteToken && <p className="form-success" role="status">You’ve been invited to a team. Sign in or create an account with the invited email to join.</p>}
           {!registering && notice && <p className="form-success" role="status">{notice}</p>}
           {registering && (
             <label>
@@ -49,6 +57,7 @@ export default function AuthenticationPanel({ onAuthenticate, onForgotPassword, 
               <input name="name" autoComplete="name" required maxLength={100} placeholder="Alex Morgan" />
             </label>
           )}
+          {!registering && inviteError && <p className="form-error" role="alert">{inviteError}</p>}
           <label>
             Email address
             <input name="email" type="email" autoComplete="email" required placeholder="you@company.com" />

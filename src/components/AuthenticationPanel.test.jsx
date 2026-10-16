@@ -34,4 +34,22 @@ describe("AuthenticationPanel", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Incorrect email or password");
   });
+
+  it("passes an invitation token through account registration", async () => {
+    const user = userEvent.setup();
+    const onAuthenticate = vi.fn().mockResolvedValue(undefined);
+    render(<AuthenticationPanel onAuthenticate={onAuthenticate} inviteToken="invite-token" />);
+
+    await user.click(screen.getByRole("button", { name: "Create an account" }));
+    await user.type(screen.getByLabelText("Your name"), "Riley Test");
+    await user.type(screen.getByRole("textbox", { name: "Email address" }), "riley@example.test");
+    await user.type(screen.getByLabelText("Password"), "correct-horse-battery");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(onAuthenticate).toHaveBeenCalledWith(expect.objectContaining({
+      email: "riley@example.test",
+      registering: true,
+      inviteToken: "invite-token",
+    }));
+  });
 });

@@ -62,7 +62,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 /* Main workspace and navigation */
 .app-shell { display: grid; width: 100%; height: 100vh; min-height: 620px; grid-template-columns: 260px minmax(0, 1fr); overflow: hidden; background: var(--paper); }
 .sidebar { display: flex; min-height: 0; flex-direction: column; background: #282744; color: #eeedf5; }
-.sidebar-brand { min-height: 76px; padding: 0 22px; color: white; font-size: 1.15rem; }
+.sidebar-brand { position: relative; min-height: 76px; padding: 0 22px; color: white; font-size: 1.15rem; }
+.mobile-nav-trigger, .mobile-nav-close, .mobile-nav-backdrop { display: none; }
 .sidebar-brand .brand-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--orange); color: #282744; }
 .sidebar-scroll { flex: 1; overflow: auto; padding: 12px 12px 24px; scrollbar-width: none; -ms-overflow-style: none; }
 .sidebar-scroll::-webkit-scrollbar { display: none; }
@@ -325,6 +326,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .auth-form h2 { font-size: 1.72rem; }
   .sidebar-scroll { grid-template-columns: 1fr; max-height: 24vh; }
   .project-heading { flex-direction: column; align-items: flex-start; gap: 17px; }
+  .project-heading-actions { width: 100%; }
   .project-welcome { padding-right: 22px; padding-left: 22px; }
   .project-welcome h1 { font-size: 2.1rem; }
   .welcome-panel { min-height: 60vh; padding: 36px 23px; }
@@ -464,6 +466,24 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .team-hub-stats > div { display: flex; min-width: 80px; flex-direction: column; gap: 4px; padding: 13px; border: 1px solid #ffffffad; border-radius: 13px; background: #ffffff91; text-align: center; }
 .team-hub-stats strong { color: #514a91; font-size: 1.35rem; }
 .team-hub-stats span { color: #85809f; font-size: .53rem; font-weight: 800; letter-spacing: .1em; }
+.pending-invites { max-width: 1480px; margin: 22px auto 0; padding: 18px 22px; border: 1px solid #ded8f3; border-radius: 16px; background: linear-gradient(110deg, #f5f1ff, #f5fbff); }
+.pending-invites-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.pending-invites-heading .dashboard-kicker { margin: 0 0 4px; }
+.pending-invites-heading h2 { margin: 0; color: #34324b; font-size: 1rem; }
+.pending-invites-heading > span { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 50%; background: #e7e1fb; color: #6255aa; font-size: .74rem; font-weight: 800; }
+.pending-invite { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid #e5e0f1; }
+.pending-invite strong { color: #37344e; font-size: .85rem; }
+.pending-invite p { margin: 4px 0 0; color: #85809a; font-size: .74rem; }
+.pending-invite .primary { flex: 0 0 auto; min-height: 36px; padding: 0 13px; font-size: .75rem; }
+.team-members-dialog { width: min(100%, 490px); }
+.team-members-list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 8px 24px 22px; list-style: none; }
+.team-members-list li { display: flex; align-items: center; gap: 12px; padding: 11px 3px; }
+.team-member-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.team-member-copy strong { overflow: hidden; color: #34324b; font-size: .85rem; text-overflow: ellipsis; white-space: nowrap; }
+.team-member-copy small { overflow: hidden; color: #85809f; font-size: .73rem; text-overflow: ellipsis; white-space: nowrap; }
+.team-member-role { padding: 5px 8px; border-radius: 999px; background: #f1effb; color: #6559a7; font-size: .65rem; font-weight: 700; text-transform: capitalize; }
+.project-heading-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+.form-hint { margin: -8px 0 0; color: #85809f; font-size: .76rem; line-height: 1.5; }
 .team-projects-heading { margin-top: 34px; }
 .team-projects-heading .secondary { background: #fff; }
 .team-project-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 15px; }
@@ -482,6 +502,35 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .project-empty-icon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 15px; background: #eeeaff; color: #7564d2; font-size: 1.5rem; }
 .team-projects-empty h3 { margin: 14px 0 0; color: #3b3854; font-size: 1.04rem; }
 .team-projects-empty p { max-width: 390px; margin: 7px 0 16px; color: #868398; font-size: .79rem; line-height: 1.5; }
+.pending-invites-messages { margin: 0 0 12px; padding: 10px; border-radius: 11px; background: #ffffff0a; }
+.pending-invites-messages .pending-invites-heading { margin-bottom: 4px; }
+.pending-invites-messages .pending-invites-heading h2 { color: #f0eff8; font-size: .74rem; }
+.pending-invites-messages .pending-invites-heading > span { width: 20px; height: 20px; background: #6255aa; color: #fff; font-size: .65rem; }
+.pending-invites-messages .pending-invite { align-items: flex-start; flex-direction: column; gap: 8px; padding: 10px 0 3px; border-color: #ffffff15; }
+.pending-invites-messages .pending-invite strong { color: #f0eff8; font-size: .72rem; }
+.pending-invites-messages .pending-invite p { color: #b6b3c8; font-size: .65rem; line-height: 1.45; }
+.pending-invites-messages .pending-invite .primary { min-height: 30px; }
+.pending-invites-messages .form-error { margin: 7px 0 0; font-size: .67rem; line-height: 1.4; }
+.notifications-control { position: relative; }
+.notification-trigger { display: flex; min-height: 35px; align-items: center; gap: 7px; padding: 0 10px; border: 1px solid #e8e5ef; border-radius: 10px; background: #fff; color: #5e587d; font-size: .73rem; font-weight: 700; }
+.notification-trigger > span:first-child { color: #7469c8; font-size: 1rem; }
+.notification-count { display: grid; min-width: 18px; height: 18px; place-items: center; padding: 0 4px; border-radius: 99px; background: #7164c7; color: #fff; font-size: .62rem; }
+.notification-panel { position: absolute; z-index: 25; top: calc(100% + 9px); right: 0; width: min(390px, calc(100vw - 28px)); max-height: min(520px, 75vh); overflow-y: auto; padding: 16px; border: 1px solid #e6e2ef; border-radius: 15px; background: #fff; box-shadow: 0 18px 48px #26213e26; }
+.notification-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+.notification-panel-header .dashboard-kicker { margin: 0 0 4px; color: #827aa9; font-size: .58rem; font-weight: 800; letter-spacing: .12em; }
+.notification-panel-header h2 { margin: 0; color: #37344e; font-size: 1rem; }
+.notification-panel-header .text-button { border: 0; background: transparent; color: #6558b1; font-size: .69rem; font-weight: 700; }
+.notification-list { display: flex; flex-direction: column; }
+.notification-item { display: flex; width: 100%; align-items: flex-start; gap: 10px; padding: 11px 5px; border: 0; border-top: 1px solid #f0eef5; background: #fff; text-align: left; }
+.notification-item:hover, .notification-item.unread { background: #f8f7fc; }
+.notification-dot { width: 8px; height: 8px; flex: 0 0 8px; margin-top: 5px; border-radius: 50%; background: transparent; }
+.notification-item.unread .notification-dot { background: #7769ca; }
+.notification-copy { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.notification-copy strong { color: #37344e; font-size: .75rem; }
+.notification-copy > span { color: #706d81; font-size: .7rem; line-height: 1.5; }
+.notification-copy time { color: #9793a4; font-size: .62rem; }
+.notification-empty { margin: 0; padding: 16px 2px 5px; color: #85809a; font-size: .75rem; }
+.notification-panel .form-error { margin: 8px 0; font-size: .72rem; }
 
 @media (max-width: 1000px) {
   .app-shell { grid-template-columns: 245px minmax(0, 1fr); }
@@ -490,23 +539,31 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .team-hub-stats > div { min-width: 69px; padding: 11px 8px; }
 }
 @media (max-width: 760px) {
-  .app-shell { grid-template-columns: 1fr; }
-  .sidebar { max-height: 47vh; }
-  .sidebar-brand { min-height: 60px; }
-  .sidebar-scroll { display: block; max-height: 33vh; overflow-y: auto; padding-right: 14px; padding-left: 14px; }
+  .app-shell { position: relative; display: block; height: 100dvh; min-height: 0; overflow: hidden; }
+  .sidebar { position: fixed; z-index: 51; top: 0; bottom: 0; left: 0; width: min(320px, 88vw); max-height: none; box-shadow: 16px 0 40px #17162c33; transform: translateX(-105%); visibility: hidden; transition: transform .24s ease, visibility .24s; }
+  .sidebar.mobile-open { transform: translateX(0); visibility: visible; transition-delay: 0s; }
+  .sidebar-brand { min-height: 64px; padding-right: 58px; }
+  .sidebar-scroll { display: block; max-height: none; overflow-y: auto; padding-right: 14px; padding-left: 14px; }
   .primary-navigation { margin-bottom: 10px; }
   .messaging-section, .teams-section { margin-bottom: 15px; }
   .sidebar-footer { min-height: 57px; }
+  .mobile-nav-trigger { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; border: 1px solid #e8e5ef; border-radius: 9px; background: #fff; color: #514b73; font-size: 1.05rem; }
+  .mobile-nav-close { position: absolute; z-index: 1; top: 15px; right: 14px; display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 8px; background: #ffffff12; color: #eeedf5; font-size: 1.35rem; }
+  .mobile-nav-backdrop { position: fixed; z-index: 50; inset: 0; display: block; width: 100%; height: 100%; border: 0; background: #17162c80; }
+  .workspace { height: 100%; }
+  .workspace-header { gap: 10px; padding: 0 14px; }
+  .workspace-header .breadcrumbs { flex: 1; }
+  .workspace-header .header-actions { flex: 0 0 auto; }
   .dashboard-view, .team-hub { padding: 22px 19px; }
   .dashboard-hero { min-height: 265px; }
   .dashboard-hero-art { position: absolute; right: -5px; bottom: -17px; opacity: .42; transform: scale(.75); transform-origin: bottom right; }
   .dashboard-hero-copy { max-width: 75%; }
   .team-hub-hero { align-items: flex-start; flex-direction: column; gap: 21px; }
   .team-hub-stats { margin-left: 0; }
+  .notification-panel { right: -58px; }
+  .header-actions .connection-state { display: none; }
 }
 @media (max-width: 480px) {
-  .sidebar { max-height: 50vh; }
-  .sidebar-scroll { max-height: 36vh; }
   .sidebar-workspace-label { padding-bottom: 11px; }
   .contact-search { margin-right: 2px; margin-left: 2px; }
   .dashboard-view, .team-hub { padding: 16px 13px; }
@@ -523,5 +580,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .team-hub-copy > p { max-width: 300px; font-size: .82rem; }
   .team-hub-stats { width: 100%; }
   .team-hub-stats > div { flex: 1; }
+  .pending-invites { margin: 15px 13px 0; padding: 15px; }
+  .pending-invite { align-items: flex-start; flex-direction: column; }
   .team-projects-heading .secondary { padding: 0 10px; font-size: .7rem; }
 }

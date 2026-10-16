@@ -4,8 +4,9 @@ const columns = [
   { id: "done", title: "Done", tone: "done" },
 ];
 
-export default function TaskBoard({ tasks, users, onOpenTask, onChangeStatus, onCreateTask }) {
+export default function TaskBoard({ tasks, users, teams = [], onOpenTask, onChangeStatus, onCreateTask }) {
   const userNames = new Map(users.map((user) => [user.id, user.name]));
+  const teamNames = new Map(teams.map((team) => [team.id, team.name]));
 
   return (
     <div className="board">
@@ -27,7 +28,10 @@ export default function TaskBoard({ tasks, users, onOpenTask, onChangeStatus, on
                     {task.description && <span className="task-description">{task.description}</span>}
                   </button>
                   <div className="task-card-footer">
-                    <span className="assignee">{task.assigned_to ? userNames.get(task.assigned_to) || "Teammate" : "Unassigned"}</span>
+                    <span className="assignee">
+                      {task.assigned_team_id ? teamNames.get(task.assigned_team_id) || "Assigned team" :
+                        task.assigned_to ? userNames.get(task.assigned_to) || "Teammate" : "Unassigned"}
+                    </span>
                     <select aria-label={`Change status for ${task.title}`} value={task.status} onChange={(event) => onChangeStatus(task, event.target.value)}>
                       {columns.map((status) => <option key={status.id} value={status.id}>{status.title}</option>)}
                     </select>

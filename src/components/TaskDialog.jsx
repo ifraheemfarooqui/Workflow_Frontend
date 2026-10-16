@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useModalDialog } from "../hooks/useModalDialog";
 
-export default function TaskDialog({ task, project, members, currentUserId, onClose, onTaskCreated, onTaskDeleted }) {
+export default function TaskDialog({ task, project, members, teams = [], currentUserId, onClose, onTaskCreated, onTaskDeleted }) {
   const dialogRef = useModalDialog(onClose);
   const [comments, setComments] = useState([]);
   const [content, setContent] = useState("");
@@ -10,6 +10,7 @@ export default function TaskDialog({ task, project, members, currentUserId, onCl
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
   const [assignee, setAssignee] = useState("");
+  const [assignedTeamId, setAssignedTeamId] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const isCreating = !task;
@@ -45,6 +46,7 @@ export default function TaskDialog({ task, project, members, currentUserId, onCl
         description: description.trim(),
         priority,
         assigned_to: assignee ? Number(assignee) : null,
+        assigned_team_id: assignedTeamId ? Number(assignedTeamId) : null,
         status: "todo",
         project_id: project.id,
       });
@@ -99,8 +101,14 @@ export default function TaskDialog({ task, project, members, currentUserId, onCl
             <label>Description <span className="optional">(optional)</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} placeholder="Add a few details…" /></label>
             <div className="form-row">
               <label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
-              <label>Assignee<select value={assignee} onChange={(event) => setAssignee(event.target.value)}><option value="">Unassigned</option>{members.map((member) => <option key={member.user.id} value={member.user.id}>{member.user.name}</option>)}</select></label>
+              <label>Person<select value={assignee} onChange={(event) => setAssignee(event.target.value)}><option value="">Unassigned</option>{members.map((member) => <option key={member.user.id} value={member.user.id}>{member.user.name}</option>)}</select></label>
             </div>
+            {teams.length > 0 && (
+              <label>Team<select value={assignedTeamId} onChange={(event) => setAssignedTeamId(event.target.value)}>
+                <option value="">No team assigned</option>
+                {teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+              </select></label>
+            )}
             {error && <p className="form-error" role="alert">{error}</p>}
             <button className="primary" type="submit" disabled={busy}>{busy ? "Creating…" : "Create task"}</button>
           </form>
@@ -109,6 +117,7 @@ export default function TaskDialog({ task, project, members, currentUserId, onCl
             <div className="task-detail">
               <span className={`priority-label priority-${task.priority}`}>{task.priority} priority</span>
               <p>{task.description || "No description has been added."}</p>
+              {task.assigned_team_id && <span className="detail-assignee">{teams.find((team) => team.id === task.assigned_team_id)?.name || "Assigned team"}</span>}
               <span className="detail-assignee">{task.assigned_to ? members.find((member) => member.user.id === task.assigned_to)?.user.name || "Assigned teammate" : "Unassigned"}</span>
             </div>
             <div className="comments-section">

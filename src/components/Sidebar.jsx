@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
+import PendingInvites from "./PendingInvites";
 
 export default function Sidebar({
   teams,
   memberships,
   selectedTeamId,
   conversations,
+  pendingInvites = [],
+  pendingInvitesError = "",
+  onAcceptInvite,
+  mobileNavOpen = false,
+  onCloseMobileNav,
   users,
   currentUserId,
   selectedChat,
@@ -34,6 +40,11 @@ export default function Sidebar({
     return { userId, user: users.find((item) => item.id === userId) };
   }).filter((conversation) => conversation.user);
   const normalizedSearch = search.trim();
+
+  function selectNavigation(callback, ...args) {
+    onCloseMobileNav?.();
+    callback(...args);
+  }
 
   useEffect(() => {
     let active = true;
@@ -80,12 +91,24 @@ export default function Sidebar({
   }, []);
 
   return (
-    <aside className="sidebar">
+    <aside
+      className={`sidebar ${mobileNavOpen ? "mobile-open" : ""}`}
+      id="workspace-sidebar"
+      aria-label="Workspace navigation"
+    >
       <a className="wordmark sidebar-brand" href="/" aria-label="Workflow home">
         <span className="brand-mark">W</span>
         <span>workflow</span>
         <span className="brand-spark" aria-hidden="true">✦</span>
       </a>
+      <button
+        className="mobile-nav-close"
+        type="button"
+        aria-label="Close navigation menu"
+        onClick={onCloseMobileNav}
+      >
+        ×
+      </button>
 
       <div className="sidebar-scroll">
         <div className="sidebar-workspace-label">
@@ -94,7 +117,7 @@ export default function Sidebar({
         </div>
 
         <nav className="nav-section primary-navigation" aria-label="Main navigation">
-          <button className={`nav-item dashboard-nav-item ${isDashboard ? "selected" : ""}`} onClick={onSelectDashboard}>
+          <button className={`nav-item dashboard-nav-item ${isDashboard ? "selected" : ""}`} onClick={() => selectNavigation(onSelectDashboard)}>
             <span className="nav-icon dashboard-icon">⌂</span>
             <span className="nav-label">Dashboard</span>
             <span className="nav-arrow" aria-hidden="true">↗</span>
@@ -104,8 +127,13 @@ export default function Sidebar({
         <section className="nav-section messaging-section" aria-labelledby="messages-heading">
           <div className="section-heading">
             <span id="messages-heading">MESSAGES</span>
-            <span className="section-counter">{directConversations.length}</span>
+            <span className="section-counter">{directConversations.length + pendingInvites.length}</span>
           </div>
+          <PendingInvites
+            invites={pendingInvites}
+            error={pendingInvitesError}
+            onAccept={(invite) => selectNavigation(onAcceptInvite, invite)}
+          />
           <label className="contact-search">
             <span className="search-icon" aria-hidden="true">⌕</span>
             <span className="sr-only">Search teammates by name or email</span>
@@ -136,7 +164,7 @@ export default function Sidebar({
                   className="contact-result"
                   onClick={() => {
                     setSearch("");
-                    onSelectDirectChat(contact.id);
+                    selectNavigation(onSelectDirectChat, contact.id);
                   }}
                 >
                   <span className="team-avatar dm-avatar">{contact.name.slice(0, 1).toUpperCase()}</span>
@@ -156,7 +184,7 @@ export default function Sidebar({
                 <button
                   key={contact.id}
                   className={`nav-item direct-nav-item ${selectedChat?.type === "direct" && selectedChat.id === contact.id ? "selected" : ""}`}
-                  onClick={() => onSelectDirectChat(contact.id)}
+                  onClick={() => selectNavigation(onSelectDirectChat, contact.id)}
                 >
                   <span className="team-avatar dm-avatar">{contact.name.slice(0, 1).toUpperCase()}</span>
                   <span className="nav-label">{contact.name}</span>
@@ -179,7 +207,7 @@ export default function Sidebar({
               <span id="teams-heading">YOUR TEAMS</span>
               <span className={`teams-toggle-icon ${teamsExpanded ? "expanded" : ""}`} aria-hidden="true">›</span>
             </button>
-            <button className="icon-button create-team-icon" onClick={onCreateTeam} aria-label="Create a team">+</button>
+            <button className="icon-button create-team-icon" onClick={() => selectNavigation(onCreateTeam)} aria-label="Create a team">+</button>
           </div>
           {teamsExpanded && (
             <div id="teams-navigation">
@@ -188,7 +216,7 @@ export default function Sidebar({
                 <div className="team-nav-group" key={team.id}>
                   <button
                     className={`nav-item team-nav-item ${team.id === selectedTeamId ? "selected" : ""}`}
-                    onClick={() => onSelectTeam(team.id)}
+                    onClick={() => selectNavigation(onSelectTeam, team.id)}
                   >
                     <span className={`team-avatar team-avatar-${index % 5}`}>{team.name.slice(0, 1).toUpperCase()}</span>
                     <span className="nav-label">{team.name}</span>
@@ -196,7 +224,7 @@ export default function Sidebar({
                   </button>
                   <button
                     className={`team-chat-link ${selectedChat?.type === "team" && selectedChat.id === team.id ? "selected" : ""}`}
-                    onClick={() => onSelectTeamChat(team.id)}
+                    onClick={() => selectNavigation(onSelectTeamChat, team.id)}
                   >
                     <span className="team-chat-status" aria-hidden="true" />
                     Team chat
@@ -215,7 +243,7 @@ export default function Sidebar({
               <div key={team.id} className="discover-item">
                 <span className={`team-avatar muted-avatar team-avatar-${index % 5}`}>{team.name.slice(0, 1).toUpperCase()}</span>
                 <span className="nav-label">{team.name}</span>
-                <button className="join-button" onClick={() => onJoinTeam(team.id)}>Join</button>
+                <button className="join-button" onClick={() => selectNavigation(onJoinTeam, team.id)}>Join</button>
               </div>
             ))}
           </section>
@@ -226,13 +254,13 @@ export default function Sidebar({
         <button
           className={`user-profile-link ${isProfile ? "selected" : ""}`}
           type="button"
-          onClick={onSelectProfile}
+          onClick={() => selectNavigation(onSelectProfile)}
           aria-label="Open your profile"
         >
           <span className="user-avatar">{user.name.slice(0, 1).toUpperCase()}</span>
           <span className="user-summary"><strong>{user.name}</strong><small>{user.email}</small></span>
         </button>
-        <button className="sign-out" onClick={onSignOut}>Sign out</button>
+        <button className="sign-out" onClick={() => selectNavigation(onSignOut)}>Sign out</button>
       </footer>
     </aside>
   );

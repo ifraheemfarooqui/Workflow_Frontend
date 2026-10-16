@@ -10,6 +10,9 @@ function renderSidebar() {
       memberships={new Set([2])}
       selectedTeamId={2}
       conversations={[]}
+      pendingInvites={[]}
+      pendingInvitesError=""
+      onAcceptInvite={vi.fn()}
       users={[]}
       currentUserId={5}
       selectedChat={null}

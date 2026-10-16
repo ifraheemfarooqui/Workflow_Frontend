@@ -17,11 +17,13 @@ WorkFlow brings teams, projects, tasks, comments, and conversations into one wor
 - Register, sign in, and sign out.
 - Navigate the workspace using URL-addressable dashboard, team, project, task, team-chat, direct-chat, and profile pages.
 - View workspace team/project/task summaries on the dashboard; view projects on each team's page.
-- Create teams and projects, join discoverable teams, and collapse/expand the sidebar's team list.
+- Create teams and projects, invite teammates by email, accept pending invitations from the Messages sidebar, add managed teams to projects, join discoverable teams, and collapse/expand the sidebar's team list.
 - Search teammates by name or email. Search requires at least two characters and results are limited by the API to contacts sharing a team with the signed-in user.
 - Use team chat and one-to-one direct messages with shared-team contacts. The chat view loads the latest message batch, applies live WebSocket updates with reconnect attempts, supports message editing/deletion, and provides emoji insertion. The API supports older-message pagination; the current interface does not expose a load-older control.
-- View a project's tasks grouped by status, create tasks with priority and an optional team-member assignee, update task status, and delete tasks.
+- View a project's tasks grouped by status, create tasks with priority and optional team and individual assignees, update task status, and delete tasks.
 - Read and add task comments.
+- View unread notifications for team, project, task, and comment activity; task-change notifications include updated project completion counts.
+- Open a notification to navigate to its related team, project, or task; notification activity refreshes automatically while the workspace is open.
 - Update profile name/email, change a password, request password recovery, and request/confirm account deletion with a code sent to the account email.
 - Display API errors and provide a workspace reload action after a load failure.
 
